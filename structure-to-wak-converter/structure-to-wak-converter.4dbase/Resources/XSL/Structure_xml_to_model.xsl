@@ -4,12 +4,6 @@
 	<xsl:output method="text" />
 	<xsl:decimal-format name="decimal" NaN="0" />
 	
-	<!-- generate keys for frequently referenced nodes -->
-	<xsl:key name="table_by_uuid" match="/base/table" use="./@uuid" />
-	<xsl:key name="field_by_uuid" match="/base/table/field" use="./@uuid" />	
-	<xsl:key name="related_1_for_table_uuid" match="/base/relation/related_field[@kind = 'source']/field_ref/table_ref" use="@uuid" />
-	<xsl:key name="related_N_for_table_uuid" match="/base/relation/related_field[@kind = 'destination']/field_ref/table_ref" use="@uuid" />
-
 	<xsl:template match="/">
 	
 		<xsl:text>{&#xA;</xsl:text>
@@ -24,16 +18,13 @@
 			<xsl:with-param name="s" select="/base/@uuid"/>
 		</xsl:call-template>
 		<xsl:text>&#xA;&#x9;}]</xsl:text>							
-
 		<xsl:text>,&#xA;&#x9;&quot;extraProperties&quot;: {&#xA;</xsl:text>
 		<xsl:text>&#x9;&#x9;&quot;version&quot;: &quot;1&quot;,&#xA;</xsl:text>
-		
-		<xsl:apply-templates select="/base/table" mode="classes" />	
-		
-		<xsl:call-template name="model" />
-		
-		<xsl:apply-templates select="/base/table" />
-		
+		<xsl:text>&#x9;&#x9;&quot;classes&quot;: {&#xA;</xsl:text>
+		<xsl:text>&#x9;&#x9;},&#xA;</xsl:text>		
+		<xsl:text>&#x9;&#x9;&quot;model&quot;: {}&#xA;</xsl:text>
+		<xsl:text>&#x9;},&#xA;</xsl:text>		
+		<xsl:text>&#x9;&quot;dataClasses&quot;: []&#xA;</xsl:text>
 		<xsl:text>}&#xA;</xsl:text>
 	</xsl:template>
 
