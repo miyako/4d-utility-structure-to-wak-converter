@@ -4,6 +4,12 @@
 	<xsl:output method="text" />
 	<xsl:decimal-format name="decimal" NaN="0" />
 	
+	<!-- generate keys for frequently referenced nodes -->
+	<xsl:key name="table_by_uuid" match="/base/table" use="./@uuid" />
+	<xsl:key name="field_by_uuid" match="/base/table/field" use="./@uuid" />	
+	<xsl:key name="related_1_for_table_uuid" match="/base/relation/related_field[@kind = 'source']/field_ref/table_ref" use="@uuid" />
+	<xsl:key name="related_N_for_table_uuid" match="/base/relation/related_field[@kind = 'destination']/field_ref/table_ref" use="@uuid" />
+
 	<xsl:template match="/">
 	
 		<xsl:text>{&#xA;</xsl:text>
@@ -18,13 +24,16 @@
 			<xsl:with-param name="s" select="/base/@uuid"/>
 		</xsl:call-template>
 		<xsl:text>&#xA;&#x9;}]</xsl:text>							
+
 		<xsl:text>,&#xA;&#x9;&quot;extraProperties&quot;: {&#xA;</xsl:text>
 		<xsl:text>&#x9;&#x9;&quot;version&quot;: &quot;1&quot;,&#xA;</xsl:text>
-		<xsl:text>&#x9;&#x9;&quot;classes&quot;: {&#xA;</xsl:text>
-		<xsl:text>&#x9;&#x9;},&#xA;</xsl:text>		
-		<xsl:text>&#x9;&#x9;&quot;model&quot;: {}&#xA;</xsl:text>
-		<xsl:text>&#x9;},&#xA;</xsl:text>		
-		<xsl:text>&#x9;&quot;dataClasses&quot;: []&#xA;</xsl:text>
+		
+		<xsl:apply-templates select="/base/table" mode="classes" />	
+		
+		<xsl:call-template name="model" />
+		
+		<xsl:apply-templates select="/base/table" />
+		
 		<xsl:text>}&#xA;</xsl:text>
 	</xsl:template>
 
@@ -347,51 +356,55 @@
 				<xsl:text>&#xA;&#x9;&#x9;&#x9;&#x9;}</xsl:text>
 			</xsl:for-each>
 			<!--RELATION(N)-->
-			<xsl:for-each select="key('related_N_for_table_uuid', @uuid)">
-				<xsl:if test="not(./field)">
-					<xsl:text>,&#xA;</xsl:text>
-				</xsl:if>
-				<xsl:text>&#x9;&#x9;&#x9;&#x9;{&#xA;</xsl:text>
-				<xsl:text>&#x9;&#x9;&#x9;&#x9;&#x9;&quot;name&quot;: </xsl:text>			
-				<xsl:call-template name="escape-string">
-					<xsl:with-param name="s" select="../../../@name_1toN"/>
-				</xsl:call-template>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;type&quot;: </xsl:text>	
-				<xsl:call-template name="escape-string">
-					<xsl:with-param name="s" select="concat(../../../related_field[@kind = 'source']/field_ref/table_ref/@name, 'Collection')"/>
-				</xsl:call-template>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;path&quot;: </xsl:text>		
-				<xsl:call-template name="escape-string">
-					<xsl:with-param name="s" select="../../../@name_Nto1"/>
-				</xsl:call-template>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;kind&quot;: &quot;relatedEntities&quot;</xsl:text>
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;reversePath&quot;: &quot;true&quot;</xsl:text>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;scope&quot;: &quot;public&quot;</xsl:text>	
-				<xsl:text>&#xA;&#x9;&#x9;&#x9;&#x9;}</xsl:text>
-			</xsl:for-each>
+			<xsl:if test="/base/relation/related_field[@kind = 'destination']/field_ref/table_ref">
+				<xsl:for-each select="key('related_N_for_table_uuid', @uuid)">
+					<xsl:if test="not(./field)">
+						<xsl:text>,&#xA;</xsl:text>
+					</xsl:if>
+					<xsl:text>&#x9;&#x9;&#x9;&#x9;{&#xA;</xsl:text>
+					<xsl:text>&#x9;&#x9;&#x9;&#x9;&#x9;&quot;name&quot;: </xsl:text>			
+					<xsl:call-template name="escape-string">
+						<xsl:with-param name="s" select="../../../@name_1toN"/>
+					</xsl:call-template>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;type&quot;: </xsl:text>	
+					<xsl:call-template name="escape-string">
+						<xsl:with-param name="s" select="concat(../../../related_field[@kind = 'source']/field_ref/table_ref/@name, 'Collection')"/>
+					</xsl:call-template>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;path&quot;: </xsl:text>		
+					<xsl:call-template name="escape-string">
+						<xsl:with-param name="s" select="../../../@name_Nto1"/>
+					</xsl:call-template>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;kind&quot;: &quot;relatedEntities&quot;</xsl:text>
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;reversePath&quot;: &quot;true&quot;</xsl:text>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;scope&quot;: &quot;public&quot;</xsl:text>	
+					<xsl:text>&#xA;&#x9;&#x9;&#x9;&#x9;}</xsl:text>
+				</xsl:for-each>
+			</xsl:if>
 			
 			<!--RELATION(1)-->
-			<xsl:for-each select="key('related_1_for_table_uuid', @uuid)">
-				<xsl:if test="not(./field)">
-					<xsl:text>,&#xA;</xsl:text>
-				</xsl:if>
-				<xsl:text>&#x9;&#x9;&#x9;&#x9;{&#xA;</xsl:text>
-				<xsl:text>&#x9;&#x9;&#x9;&#x9;&#x9;&quot;name&quot;: </xsl:text>			
-				<xsl:call-template name="escape-string">
-					<xsl:with-param name="s" select="../../../@name_Nto1"/>
-				</xsl:call-template>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;type&quot;: </xsl:text>	
-				<xsl:call-template name="escape-string">
-					<xsl:with-param name="s" select="../../../related_field[@kind = 'destination']/field_ref/table_ref/@name"/>
-				</xsl:call-template>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;path&quot;: </xsl:text>		
-				<xsl:call-template name="escape-string">
-					<xsl:with-param name="s" select="../../../related_field[@kind = 'destination']/field_ref/table_ref/@name"/>
-				</xsl:call-template>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;kind&quot;: &quot;relatedEntity&quot;</xsl:text>	
-				<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;scope&quot;: &quot;public&quot;</xsl:text>	
-				<xsl:text>&#xA;&#x9;&#x9;&#x9;&#x9;}</xsl:text>
-			</xsl:for-each>
+			<xsl:if test="/base/relation/related_field[@kind = 'source']/field_ref/table_ref">
+				<xsl:for-each select="key('related_1_for_table_uuid', @uuid)">
+					<xsl:if test="not(./field)">
+						<xsl:text>,&#xA;</xsl:text>
+					</xsl:if>
+					<xsl:text>&#x9;&#x9;&#x9;&#x9;{&#xA;</xsl:text>
+					<xsl:text>&#x9;&#x9;&#x9;&#x9;&#x9;&quot;name&quot;: </xsl:text>			
+					<xsl:call-template name="escape-string">
+						<xsl:with-param name="s" select="../../../@name_Nto1"/>
+					</xsl:call-template>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;type&quot;: </xsl:text>	
+					<xsl:call-template name="escape-string">
+						<xsl:with-param name="s" select="../../../related_field[@kind = 'destination']/field_ref/table_ref/@name"/>
+					</xsl:call-template>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;path&quot;: </xsl:text>		
+					<xsl:call-template name="escape-string">
+						<xsl:with-param name="s" select="../../../related_field[@kind = 'destination']/field_ref/table_ref/@name"/>
+					</xsl:call-template>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;kind&quot;: &quot;relatedEntity&quot;</xsl:text>	
+					<xsl:text>,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&quot;scope&quot;: &quot;public&quot;</xsl:text>	
+					<xsl:text>&#xA;&#x9;&#x9;&#x9;&#x9;}</xsl:text>
+				</xsl:for-each>
+			</xsl:if>
 
 			<xsl:text>&#xA;&#x9;&#x9;&#x9;]</xsl:text>
 			
